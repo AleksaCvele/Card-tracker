@@ -1,0 +1,7 @@
+scryfall_default_cards.jsonl
+temp_scryfall_data.jsonl.gz
+__pycache__/
+*.pyc
+.vscode/
+.idea/
+scryfall.db

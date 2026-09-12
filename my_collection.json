@@ -1,0 +1,30 @@
+[
+  {
+    "name": "Forest",
+    "set": "blb",
+    "collector_number": "280",
+    "quantity": 4,
+    "is_foil": false,
+    "cmc": "0",
+    "colors": "C",
+    "type": "Basic Land — Forest",
+    "rarity": "Common",
+    "price_normal": "€0.30",
+    "price_foil": "€0.49",
+    "price_numeric": 0.3
+  },
+  {
+    "name": "Fury Sliver",
+    "set": "tsp",
+    "collector_number": "157",
+    "quantity": 2,
+    "is_foil": false,
+    "cmc": "6",
+    "colors": "R",
+    "type": "Creature — Sliver",
+    "rarity": "Uncommon",
+    "price_normal": "€0.41",
+    "price_foil": "€1.78",
+    "price_numeric": 0.41
+  }
+]
