@@ -1,9 +1,9 @@
-import os
 import gzip
+import os
 import shutil
 import sys
+
 import requests
-from typing import Optional
 
 
 class ScryfallDownloader:
@@ -26,7 +26,7 @@ class ScryfallDownloader:
     def target_url(self) -> str:
         return f"{self.BASE_API_URL}/{self.data_type}"
 
-    def _get_download_link(self) -> Optional[str]:
+    def _get_download_link(self) -> str | None:
         print("Preuzimanje metapodataka sa Scryfall-a...")
         response = requests.get(self.target_url, headers=self.headers)
         response.raise_for_status()

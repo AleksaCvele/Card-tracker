@@ -1,5 +1,4 @@
 import os
-from typing import List, Tuple
 
 import openpyxl
 from openpyxl.styles import Alignment, Font, PatternFill
@@ -10,7 +9,7 @@ from models.card import Card
 class CollectionExporter:
 
     @staticmethod
-    def export_to_excel(cards: List[Card], filename: str = "") -> Tuple[bool, str]:
+    def export_to_excel(cards: list[Card], filename: str = "") -> tuple[bool, str]:
         try:
             wb = openpyxl.Workbook()
             ws = wb.active
@@ -33,7 +32,7 @@ class CollectionExporter:
                 cell.alignment = align_center
 
             start_row = 2
-            for i, card in enumerate(cards):
+            for card in cards:
                 foil_text = "Da" if card.is_foil else "Ne"
                 quantity = getattr(card, "quantity", getattr(card, "count", 1))
 

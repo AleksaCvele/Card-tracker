@@ -1,8 +1,6 @@
-from typing import List, Tuple
 
 import openpyxl
 
-from models.card import Card
 
 class ExcelImporter:
     """Uvozi kolekciju iz Excel fajla."""
@@ -11,7 +9,7 @@ class ExcelImporter:
     QUANTITY_KEYWORDS = ["količina", "kolicina", "qty", "count", "kom"]
 
     @classmethod
-    def import_file(cls, file_path: str, database, collection) -> Tuple[int, List[str]]:
+    def import_file(cls, file_path: str, database, collection) -> tuple[int, list[str]]:
         wb = openpyxl.load_workbook(file_path, data_only=True)
         ws = wb.active
         rows = list(ws.iter_rows(values_only=True))

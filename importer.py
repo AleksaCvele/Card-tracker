@@ -1,13 +1,15 @@
 import re
-from typing import List, Dict, Tuple, Optional, Any
+from typing import Any
+
 from openpyxl import load_workbook
+
 from collection import CollectionStorage
 
 
 class CardImporter:
 
     @staticmethod
-    def parse_universal_line(line: str) -> Optional[Tuple[int, str, Optional[str], Optional[str]]]:
+    def parse_universal_line(line: str) -> tuple[int, str, str | None, str | None] | None:
         cleaned = line.strip()
         if not cleaned or cleaned.startswith("//") or cleaned.startswith("#"):
             return None
@@ -31,7 +33,7 @@ class CardImporter:
         return 1, cleaned, None, None
 
     @staticmethod
-    def parse_image_uri(line_or_text: str) -> Optional[str]:
+    def parse_image_uri(line_or_text: str) -> str | None:
     
         pattern = r'"large"\s*:\s*"(https://[^"]+)"'
         match = re.search(pattern, line_or_text)
@@ -39,10 +41,10 @@ class CardImporter:
 
     @staticmethod
     def match_cards_with_database(
-        parsed_items: List[Tuple[int, str, Optional[str], Optional[str]]],
-        all_cards_database: List[Any]
-    ) -> List[Any]:
-        db_exact_map: Dict[Tuple[str, str, str], Any] = {}
+        parsed_items: list[tuple[int, str, str | None, str | None]],
+        all_cards_database: list[Any]
+    ) -> list[Any]:
+        db_exact_map: dict[tuple[str, str, str], Any] = {}
         for card in all_cards_database:
             c_dict = card.to_dict() if hasattr(card, "to_dict") else card
             key = (
@@ -80,7 +82,7 @@ class CardImporter:
         return matched_cards
 
     @classmethod
-    def parse_card_list_text(cls, text_content: str, all_cards_database: List[Any]) -> List[Any]:
+    def parse_card_list_text(cls, text_content: str, all_cards_database: list[Any]) -> list[Any]:
         parsed_items = []
         for line in text_content.splitlines():
             item = cls.parse_universal_line(line)
@@ -90,12 +92,12 @@ class CardImporter:
         return cls.match_cards_with_database(parsed_items, all_cards_database)
 
     @classmethod
-    def parse_excel_file(cls, filepath: str, all_cards_database: List[Any]) -> List[Any]:
+    def parse_excel_file(cls, filepath: str, all_cards_database: list[Any]) -> list[Any]:
         try:
             wb = load_workbook(filename=filepath, data_only=True)
             sheet = wb.active
         except Exception as e:
-            raise ValueError(f"Greška pri otvaranju Excel fajla '{filepath}': {e}")
+            raise ValueError(f"Greška pri otvaranju Excel fajla '{filepath}': {e}") from e
 
         rows = list(sheet.iter_rows(values_only=True))
         if not rows:
@@ -140,7 +142,7 @@ class CardImporter:
         return cls.match_cards_with_database(parsed_items, all_cards_database)
 
     @staticmethod
-    def _find_column_index(header: List[str], possible_names: List[str]) -> Optional[int]:
+    def _find_column_index(header: list[str], possible_names: list[str]) -> int | None:
         for name in possible_names:
             if name in header:
                 return header.index(name)
@@ -155,8 +157,8 @@ def parse_image_uri(line_or_text: str):
 def match_cards_with_database(parsed_items, all_cards_database):
     return CardImporter.match_cards_with_database(parsed_items, all_cards_database)
 
-def parse_card_list_text(text_content: str, all_cards_database: List[Any]):
+def parse_card_list_text(text_content: str, all_cards_database: list[Any]):
     return CardImporter.parse_card_list_text(text_content, all_cards_database)
 
-def parse_excel_file(filepath: str, all_cards_database: List[Any]):
+def parse_excel_file(filepath: str, all_cards_database: list[Any]):
     return CardImporter.parse_excel_file(filepath, all_cards_database)

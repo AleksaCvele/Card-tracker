@@ -1,11 +1,8 @@
 import tkinter as tk
 from tkinter import ttk
-from typing import List
-from PIL import Image, ImageTk
-
-from services.image_loader import ImageLoader
 
 from models.card import Card
+from services.image_loader import ImageLoader
 
 
 class FastCardList(ttk.Frame):
@@ -17,7 +14,7 @@ class FastCardList(ttk.Frame):
         self.cards_per_page = cards_per_page
         self.is_collection_view = is_collection_view
         self.current_page = 0
-        self.current_cards: List[Card] = []
+        self.current_cards: list[Card] = []
         
         self.preview_window = None
         self.preview_image_cache = {}
@@ -166,7 +163,7 @@ class FastCardList(ttk.Frame):
             self.preview_window.destroy()
             self.preview_window = None
 
-    def populate(self, cards_list: List[Card]):
+    def populate(self, cards_list: list[Card]):
         self.current_cards = cards_list
         self.current_page = 0
         self._render_page()

@@ -1,8 +1,9 @@
 import os
 import threading
 import urllib.request
-import tkinter as tk
+
 from PIL import Image, ImageTk
+
 
 class ImageLoader:
     _cache_dir = "image_cache"
