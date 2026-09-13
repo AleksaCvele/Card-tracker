@@ -8,7 +8,7 @@ Built with Python + Tkinter.
 
 ## Features
 
-- **Search** the full Scryfall bulk database (indexed locally in SQLite)
+- **Search** the full Scryfall bulk database through a local SQLite FTS5 index, ranked by relevance
 - **Collection tracking** with separate foil and non-foil entries, quantities, and running totals
 - **Pricing** in EUR and RSD, using live exchange rates with a per-tier retail margin
 - **Import** decklists as plain text (`4 Lightning Bolt (LEB) 161`) or from Excel
@@ -34,8 +34,13 @@ python main.py
 ```
 
 On first launch the app downloads the Scryfall bulk data file (~2 GB uncompressed)
-and builds a local SQLite index. This takes a few minutes; subsequent launches
-read straight from the index.
+and builds a local SQLite index. This takes a few minutes. Subsequent launches
+open the index directly and start immediately — cards are read a page at a
+time rather than loaded into memory, so the app stays at tens of MB of RAM
+regardless of database size.
+
+If you already have an index from an older version, it is detected by schema
+version and rebuilt automatically on next launch.
 
 ## Usage
 
@@ -44,6 +49,18 @@ read straight from the index.
 | **Sve Kartice** | Search the database; add a card as foil or non-foil |
 | **Moja Kolekcija** | Review the collection, see totals, save to JSON or Excel |
 | **Import Lista** | Paste a decklist or import an `.xlsx` file |
+
+### Search
+
+Search runs against an FTS5 index over card name, set, type line and collector
+number. Every term must match (`lightning beta` finds only Bolts from Beta).
+
+It tries word-prefix matching first, which is fast and ranked by relevance
+(bm25), so `light` finds *Lightning Bolt* and the closest matches come first.
+If a prefix query returns nothing, it falls back to a trigram index that
+matches anywhere inside a word — so `ning` still finds *Lightning Bolt*. The
+trigram index is what makes the on-disk index roughly twice the size; that is
+the trade for mid-word search.
 
 ### Decklist format
 
@@ -97,8 +114,10 @@ collection.py         Collection persistence (JSON/Excel)
 importer.py           Decklist parsing and database matching
 models/card.py        Card model: parsing, pricing, identity, sorting
 services/
-  sqlite_database.py  SQLite-backed card database (used by the app)
-  card_database.py    Plain JSONL-backed database (no index)
+  sqlite_database.py  SQLite-backed card database with FTS search (used by the app)
+  card_database.py    Plain JSONL-backed database, kept in memory (no index)
+  card_lookup.py      Lookup contract shared by both database backends
+  card_query.py       Lazy, pageable result set over SQLite
   card_collection.py  Collection operations and totals
   pricing.py          Exchange rates and RSD retail pricing
   excel_importer.py   Excel -> collection

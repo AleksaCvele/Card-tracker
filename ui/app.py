@@ -5,7 +5,7 @@ from tkinter import Label, Toplevel, filedialog, messagebox, scrolledtext, ttk
 
 from models.card import Card
 from services.card_collection import CardCollection
-from services.card_database import CardDatabase
+from services.card_lookup import CardLookup
 from services.excel_exporter import CollectionExporter
 from services.excel_importer import ExcelImporter
 from ui.card_list import FastCardList
@@ -28,7 +28,7 @@ def load_database_background(database, on_complete_callback):
 
 class ScryfallApp:
 
-    def __init__(self, root: tk.Tk, database: CardDatabase, collection: CardCollection):
+    def __init__(self, root: tk.Tk, database: CardLookup, collection: CardCollection):
         self.root = root
         self.db = database
         self.collection = collection
@@ -161,7 +161,7 @@ class ScryfallApp:
         self.start_loading_process()
 
     def refresh_card_display(self):
-        self.list_all.populate(self.db.cards)
+        self.list_all.populate(self.db.all_cards())
         self._load_collection_from_input()
 
     def start_loading_process(self):

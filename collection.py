@@ -5,6 +5,8 @@ from typing import Any
 
 import openpyxl
 
+from services.card_lookup import as_lookup
+
 logger = logging.getLogger(__name__)
 
 
@@ -49,7 +51,7 @@ class CollectionStorage:
             return False, filename
 
     @classmethod
-    def load_from_file(cls, filename: str, all_cards_database: list[Any]) -> list[Any]:
+    def load_from_file(cls, filename: str, card_source: Any) -> list[Any]:
       
         if not os.path.exists(filename):
             # Provera ako je prošireno bez ekstenzije
@@ -61,13 +63,13 @@ class CollectionStorage:
                 return []
 
         if filename.endswith(".xlsx"):
-            return cls._load_from_excel(filename, all_cards_database)
+            return cls._load_from_excel(filename, card_source)
         
-        return cls._load_from_json(filename, all_cards_database)
+        return cls._load_from_json(filename, card_source)
 
     @classmethod
-    def _load_from_json(cls, filename: str, all_cards_database: list[Any]) -> list[Any]:
-        db_map, db_cheapest_map = cls._build_database_maps(all_cards_database)
+    def _load_from_json(cls, filename: str, card_source: Any) -> list[Any]:
+        lookup = as_lookup(card_source)
         loaded_collection = []
 
         try:
@@ -84,11 +86,7 @@ class CollectionStorage:
                 qty = item.get("quantity", 1)
                 is_foil = item.get("is_foil", False)
 
-                found_card = None
-                if exact_key in db_map:
-                    found_card = db_map[exact_key]
-                elif name_key in db_cheapest_map:
-                    found_card = db_cheapest_map[name_key]
+                found_card = lookup.find_exact(*exact_key) or lookup.find_cheapest_by_name(name_key)
 
                 if found_card:
                     if hasattr(found_card, "clone"):
@@ -108,7 +106,7 @@ class CollectionStorage:
 
     
     @classmethod
-    def _load_from_excel(cls, filename: str, all_cards_database: list[Any]) -> list[Any]:
+    def _load_from_excel(cls, filename: str, card_source: Any) -> list[Any]:
         try:
             wb = openpyxl.load_workbook(filename=filename, data_only=True)
             sheet = wb.active
@@ -132,7 +130,7 @@ class CollectionStorage:
             logger.error("Excel fajl ne sadrži prepoznatljivu kolonu sa nazivom kartice.")
             return []
 
-        db_map, db_cheapest_map = cls._build_database_maps(all_cards_database)
+        lookup = as_lookup(card_source)
         loaded_collection = []
 
         for row in rows[1:]:
@@ -158,10 +156,10 @@ class CollectionStorage:
             name_key = name.lower()
 
             found_card = None
-            if set_code and coll_num and exact_key in db_map:
-                found_card = db_map[exact_key]
-            elif name_key in db_cheapest_map:
-                found_card = db_cheapest_map[name_key]
+            if set_code and coll_num:
+                found_card = lookup.find_exact(*exact_key)
+            if not found_card:
+                found_card = lookup.find_cheapest_by_name(name_key)
 
             if found_card:
                 loaded_collection.append(cls._with_quantity(found_card, qty))
@@ -180,44 +178,8 @@ class CollectionStorage:
         return card_copy
 
     @staticmethod
-    def _build_database_maps(all_cards_database: list[Any]) -> tuple[dict, dict]:
-        db_map = {}
-        for card in all_cards_database:
-            c_dict = card.to_dict() if hasattr(card, "to_dict") else card
-            key = (
-                c_dict.get("name", "").lower(),
-                c_dict.get("set", c_dict.get("set_name", "")).lower(),
-                str(c_dict.get("collector_number", ""))
-            )
-            if key not in db_map:
-                db_map[key] = card
-
-        db_cheapest_map = CollectionStorage._find_cheapest_versions_map(all_cards_database)
-        return db_map, db_cheapest_map
-
-    @staticmethod
     def _find_column_index(header: list[str], possible_names: list[str]) -> int | None:
         for name in possible_names:
             if name in header:
                 return header.index(name)
         return None
-
-    @staticmethod
-    def _find_cheapest_versions_map(all_cards: list[Any]) -> dict[str, Any]:
-        cheapest_map = {}
-        for card in all_cards:
-            c_dict = card.to_dict() if hasattr(card, "to_dict") else card
-            name_key = c_dict.get("name", "").lower()
-            price = c_dict.get("price_numeric", 0.0)
-
-            if name_key not in cheapest_map:
-                cheapest_map[name_key] = card
-            else:
-                existing_card = cheapest_map[name_key]
-                ex_dict = existing_card.to_dict() if hasattr(existing_card, "to_dict") else existing_card
-                current_cheapest_price = ex_dict.get("price_numeric", 0.0)
-
-                if price > 0 and (current_cheapest_price == 0 or price < current_cheapest_price):
-                    cheapest_map[name_key] = card
-
-        return cheapest_map

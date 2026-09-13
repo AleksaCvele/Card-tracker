@@ -3,6 +3,7 @@ import logging
 
 from downloader import ScryfallDownloader
 from models.card import Card
+from services.card_lookup import InMemoryCardLookup
 
 logger = logging.getLogger(__name__)
 
@@ -13,6 +14,7 @@ class CardDatabase:
     def __init__(self, filepath: str):
         self.filepath = filepath
         self.cards: list[Card] = []
+        self._lookup = InMemoryCardLookup([])
 
     def load_cards(self) -> None:
         self.cards = []
@@ -27,6 +29,7 @@ class CardDatabase:
                     if Card.has_valid_price(card_data):
                         self.cards.append(Card(card_data))
 
+            self._lookup = InMemoryCardLookup(self.cards)
             logger.info(f"Uspešno učitano {len(self.cards)} karata u bazu.")
         except Exception as e:
             logger.error(f"Greška pri učitavanju baze: {e}")
@@ -39,6 +42,18 @@ class CardDatabase:
             self.load_cards()
 
         return success
+
+    def all_cards(self) -> list[Card]:
+        return self.cards
+
+    def find_exact(self, name: str, set_code: str, collector_number: str) -> Card | None:
+        return self._lookup.find_exact(name, set_code, collector_number)
+
+    def find_cheapest_by_name(self, name: str) -> Card | None:
+        return self._lookup.find_cheapest_by_name(name)
+
+    def count(self) -> int:
+        return len(self.cards)
 
     def search(self, query: str) -> list[Card]:
         query_terms = query.strip().lower().split()

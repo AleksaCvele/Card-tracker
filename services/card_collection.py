@@ -42,10 +42,9 @@ class CardCollection:
     def load(self, database, filename: str | None = None) -> list[Card]:
 
         target_filename = filename or self.filename
-        raw_dict_cards = [card.to_dict() for card in database.cards]
-        loaded_dicts = CollectionStorage.load_from_file(target_filename, raw_dict_cards)
+        loaded = CollectionStorage.load_from_file(target_filename, database)
 
-        self.items = [Card(data, data.get("is_foil", False)) for data in loaded_dicts]
+        self.items = [item if isinstance(item, Card) else Card(item, item.get("is_foil", False)) for item in loaded]
         self.items.sort()
         self.filename = target_filename
 
@@ -69,13 +68,12 @@ class CardCollection:
         if not parsed_items:
             return 0, []
 
-        db_raw_dicts = [card.to_dict() for card in database.cards]
-        matched_dicts, unmatched = match_cards_with_database(parsed_items, db_raw_dicts)
+        matched, unmatched = match_cards_with_database(parsed_items, database)
 
-        for card_dict in matched_dicts:
-            self.add_card(Card(card_dict))
+        for item in matched:
+            self.add_card(item if isinstance(item, Card) else Card(item))
 
-        return len(matched_dicts), unmatched
+        return len(matched), unmatched
 
     def get_total_value(self) -> float:
         return sum(card.price_numeric * card.quantity for card in self.items)

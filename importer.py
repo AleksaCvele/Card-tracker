@@ -2,6 +2,7 @@ import re
 from typing import Any
 
 from collection import CollectionStorage
+from services.card_lookup import as_lookup
 
 
 class CardImporter:
@@ -34,35 +35,25 @@ class CardImporter:
     @staticmethod
     def match_cards_with_database(
         parsed_items: list[tuple[int, str, str | None, str | None]],
-        all_cards_database: list[Any],
+        card_source: Any,
     ) -> tuple[list[Any], list[str]]:
-        """Vraca (uparene karte, opisi onih koje nismo nasli)."""
-        db_exact_map: dict[tuple[str, str, str], Any] = {}
-        for card in all_cards_database:
-            c_dict = card.to_dict() if hasattr(card, "to_dict") else card
-            key = (
-                c_dict.get("name", "").lower(),
-                c_dict.get("set", "").lower(),
-                str(c_dict.get("collector_number", "")),
-            )
-            if key not in db_exact_map:
-                db_exact_map[key] = card
+        """Vraca (uparene karte, opisi onih koje nismo nasli).
 
-        db_cheapest_map = CollectionStorage._find_cheapest_versions_map(all_cards_database)
+        `card_source` moze biti baza, CardLookup ili obicna lista karata.
+        """
+        lookup = as_lookup(card_source)
 
         matched_cards = []
         unmatched: list[str] = []
 
         for qty, name, set_code, coll_num in parsed_items:
-            name_key = name.lower()
             found_card = None
 
             if set_code and coll_num:
-                exact_key = (name_key, set_code.lower(), str(coll_num))
-                found_card = db_exact_map.get(exact_key)
+                found_card = lookup.find_exact(name, set_code, coll_num)
 
             if not found_card:
-                found_card = db_cheapest_map.get(name_key)
+                found_card = lookup.find_cheapest_by_name(name)
 
             if found_card:
                 matched_cards.append(CollectionStorage._with_quantity(found_card, qty))
@@ -82,8 +73,8 @@ class CardImporter:
         return parsed_items
 
     @classmethod
-    def parse_card_list_text(cls, text_content: str, all_cards_database: list[Any]) -> tuple[list[Any], list[str]]:
-        return cls.match_cards_with_database(cls.parse_lines(text_content), all_cards_database)
+    def parse_card_list_text(cls, text_content: str, card_source: Any) -> tuple[list[Any], list[str]]:
+        return cls.match_cards_with_database(cls.parse_lines(text_content), card_source)
 
 
 def parse_universal_line(line: str):
@@ -94,9 +85,9 @@ def parse_lines(text_content: str):
     return CardImporter.parse_lines(text_content)
 
 
-def match_cards_with_database(parsed_items, all_cards_database):
-    return CardImporter.match_cards_with_database(parsed_items, all_cards_database)
+def match_cards_with_database(parsed_items, card_source):
+    return CardImporter.match_cards_with_database(parsed_items, card_source)
 
 
-def parse_card_list_text(text_content: str, all_cards_database: list[Any]):
-    return CardImporter.parse_card_list_text(text_content, all_cards_database)
+def parse_card_list_text(text_content: str, card_source: Any):
+    return CardImporter.parse_card_list_text(text_content, card_source)

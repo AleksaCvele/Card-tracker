@@ -1,6 +1,8 @@
 
 import openpyxl
 
+from services.card_lookup import as_lookup
+
 
 class ExcelImporter:
     """Uvozi kolekciju iz Excel fajla."""
@@ -47,13 +49,7 @@ class ExcelImporter:
             qty_idx = 1 if len(rows[0]) > 1 else -1
             start_row = 0
 
-        db_lookup = {}
-
-        for card in database.cards:
-            clean_name = card.name.strip().lower()
-
-            if clean_name not in db_lookup:
-                db_lookup[clean_name] = card
+        lookup = as_lookup(database)
 
         added_count = 0
         unmatched = []
@@ -81,18 +77,7 @@ class ExcelImporter:
             if qty <= 0:
                 continue
 
-            clean_name = raw_name.lower()
-            matched_card = db_lookup.get(clean_name)
-
-            if not matched_card:
-                clean_alpha = "".join(filter(str.isalnum, clean_name))
-
-                for db_name, db_card in db_lookup.items():
-                    db_alpha = "".join(filter(str.isalnum, db_name))
-
-                    if db_alpha == clean_alpha:
-                        matched_card = db_card
-                        break
+            matched_card = lookup.find_cheapest_by_name(raw_name) or lookup.find_by_loose_name(raw_name)
 
             if matched_card:
                 new_card = matched_card.clone(is_foil=False, quantity=qty)
