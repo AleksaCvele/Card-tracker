@@ -1,7 +1,10 @@
 import json
+import logging
 
 from downloader import ScryfallDownloader
 from models.card import Card
+
+logger = logging.getLogger(__name__)
 
 
 class CardDatabase:
@@ -24,9 +27,9 @@ class CardDatabase:
                     if Card.has_valid_price(card_data):
                         self.cards.append(Card(card_data))
 
-            print(f"Uspešno učitano {len(self.cards)} karata u bazu.")
+            logger.info(f"Uspešno učitano {len(self.cards)} karata u bazu.")
         except Exception as e:
-            print(f"Greška pri učitavanju baze: {e}")
+            logger.error(f"Greška pri učitavanju baze: {e}")
 
     def update_from_scryfall(self) -> bool:
         downloader = ScryfallDownloader()

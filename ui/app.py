@@ -1,3 +1,4 @@
+import logging
 import threading
 import tkinter as tk
 from tkinter import Label, Toplevel, filedialog, messagebox, scrolledtext, ttk
@@ -9,6 +10,8 @@ from services.excel_exporter import CollectionExporter
 from services.excel_importer import ExcelImporter
 from ui.card_list import FastCardList
 
+logger = logging.getLogger(__name__)
+
 
 def load_database_background(database, on_complete_callback):
     def worker():
@@ -16,7 +19,7 @@ def load_database_background(database, on_complete_callback):
             database.load_cards()
             on_complete_callback(success=True)
         except Exception as e:
-            print(f"Greška u pozadinskoj niti: {e}")
+            logger.error(f"Greška u pozadinskoj niti: {e}")
             on_complete_callback(success=False, error=str(e))
 
     thread = threading.Thread(target=worker, daemon=True)

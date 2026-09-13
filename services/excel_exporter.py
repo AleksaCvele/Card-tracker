@@ -1,9 +1,12 @@
+import logging
 import os
 
 import openpyxl
 from openpyxl.styles import Alignment, Font, PatternFill
 
 from models.card import Card
+
+logger = logging.getLogger(__name__)
 
 
 class CollectionExporter:
@@ -86,5 +89,5 @@ class CollectionExporter:
             return True, os.path.abspath(filename)
 
         except Exception as exc:
-            print(f"Greška pri eksportu u Excel: {exc}")
+            logger.error(f"Greška pri eksportu u Excel: {exc}")
             return False, str(exc)

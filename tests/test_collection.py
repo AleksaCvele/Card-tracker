@@ -169,3 +169,49 @@ def test_import_ignores_comments_and_blank_lines(fake_db):
 def test_import_of_empty_text_adds_nothing(fake_db):
     col = CardCollection()
     assert col.import_from_text("", fake_db) == (0, [])
+
+
+def test_excel_collection_load_uses_quantity_not_duplicate_rows(tmp_path, fake_db):
+    """Regresija: ucitavanje je dodavalo istu referencu qty puta sa quantity=1."""
+    import openpyxl
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(["Naziv kartice", "Set iz kog je kartica", "Kolekcijski broj kartice", "Kolicina"])
+    ws.append(["Forest", "blb", "280", 4])
+    path = tmp_path / "col.xlsx"
+    wb.save(path)
+
+    col = CardCollection(str(path))
+    col.load(fake_db)
+
+    assert len(col.items) == 1
+    assert col.items[0].quantity == 4
+    assert col.get_total_count() == 4
+
+
+def test_excel_collection_load_does_not_alias_entries(tmp_path, fake_db):
+    import openpyxl
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(["Naziv kartice", "Kolicina"])
+    ws.append(["Forest", 2])
+    ws.append(["Lightning Bolt", 1])
+    path = tmp_path / "col.xlsx"
+    wb.save(path)
+
+    col = CardCollection(str(path))
+    col.load(fake_db)
+
+    assert len({id(item) for item in col.items}) == len(col.items)
+
+
+def test_import_reports_cards_it_could_not_find(fake_db):
+    """Regresija: uvoz iz teksta je tiho odbacivao neprepoznate kartice."""
+    col = CardCollection()
+    added, unmatched = col.import_from_text("4 Forest\n2 Black Lotus\n1 Mox Pearl", fake_db)
+
+    assert added == 1
+    assert unmatched == ["2x Black Lotus", "1x Mox Pearl"]
+    assert col.get_total_count() == 4

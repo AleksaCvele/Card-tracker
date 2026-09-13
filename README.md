@@ -93,8 +93,8 @@ suite is fast, offline, and deterministic.
 ```
 main.py               Entry point: downloads data if needed, starts the UI
 downloader.py         Fetches and decompresses Scryfall bulk data
-collection.py         Collection persistence (JSON/Excel) + legacy exporter
-importer.py           Decklist and Excel parsing
+collection.py         Collection persistence (JSON/Excel)
+importer.py           Decklist parsing and database matching
 models/card.py        Card model: parsing, pricing, identity, sorting
 services/
   sqlite_database.py  SQLite-backed card database (used by the app)
@@ -103,7 +103,7 @@ services/
   pricing.py          Exchange rates and RSD retail pricing
   excel_importer.py   Excel -> collection
   excel_exporter.py   Collection -> Excel
-  image_loader.py     Threaded image fetching with a disk cache
+  image_loader.py     Threaded image fetching with an LRU disk cache
 ui/
   app.py              Main window and tabs
   card_list.py        Paginated card list with hover previews

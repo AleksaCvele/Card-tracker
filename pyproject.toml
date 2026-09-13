@@ -59,9 +59,5 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-# The app talks to the user through the console in places; tests print nothing.
-"downloader.py" = ["T20"]
-"collection.py" = ["T20"]
-"main.py" = ["T20"]
-"services/*.py" = ["T20"]
-"ui/*.py" = ["T20"]
+# Tests may use assert-heavy style and long parametrised tables.
+"tests/*" = ["E501"]

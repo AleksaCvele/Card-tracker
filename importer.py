@@ -1,12 +1,11 @@
 import re
 from typing import Any
 
-from openpyxl import load_workbook
-
 from collection import CollectionStorage
 
 
 class CardImporter:
+    """Parsira tekstualne liste kartica i uparuje ih sa bazom."""
 
     @staticmethod
     def parse_universal_line(line: str) -> tuple[int, str, str | None, str | None] | None:
@@ -33,24 +32,18 @@ class CardImporter:
         return 1, cleaned, None, None
 
     @staticmethod
-    def parse_image_uri(line_or_text: str) -> str | None:
-    
-        pattern = r'"large"\s*:\s*"(https://[^"]+)"'
-        match = re.search(pattern, line_or_text)
-        return match.group(1) if match else None
-
-    @staticmethod
     def match_cards_with_database(
         parsed_items: list[tuple[int, str, str | None, str | None]],
-        all_cards_database: list[Any]
-    ) -> list[Any]:
+        all_cards_database: list[Any],
+    ) -> tuple[list[Any], list[str]]:
+        """Vraca (uparene karte, opisi onih koje nismo nasli)."""
         db_exact_map: dict[tuple[str, str, str], Any] = {}
         for card in all_cards_database:
             c_dict = card.to_dict() if hasattr(card, "to_dict") else card
             key = (
                 c_dict.get("name", "").lower(),
                 c_dict.get("set", "").lower(),
-                str(c_dict.get("collector_number", ""))
+                str(c_dict.get("collector_number", "")),
             )
             if key not in db_exact_map:
                 db_exact_map[key] = card
@@ -58,6 +51,8 @@ class CardImporter:
         db_cheapest_map = CollectionStorage._find_cheapest_versions_map(all_cards_database)
 
         matched_cards = []
+        unmatched: list[str] = []
+
         for qty, name, set_code, coll_num in parsed_items:
             name_key = name.lower()
             found_card = None
@@ -70,95 +65,38 @@ class CardImporter:
                 found_card = db_cheapest_map.get(name_key)
 
             if found_card:
-                if hasattr(found_card, "clone"):
-                    card_clone = found_card.clone(quantity=qty)
-                    card_clone.quantity = qty
-                    matched_cards.append(card_clone)
-                else:
-                    card_copy = found_card.copy() if isinstance(found_card, dict) else dict(found_card)
-                    card_copy["quantity"] = qty
-                    matched_cards.append(card_copy)
+                matched_cards.append(CollectionStorage._with_quantity(found_card, qty))
+            else:
+                unmatched.append(f"{qty}x {name}")
 
-        return matched_cards
+        return matched_cards, unmatched
 
     @classmethod
-    def parse_card_list_text(cls, text_content: str, all_cards_database: list[Any]) -> list[Any]:
+    def parse_lines(cls, text_content: str) -> list[tuple[int, str, str | None, str | None]]:
+        """Tekst -> (kolicina, ime, set, kolekcijski broj), bez diranja baze."""
         parsed_items = []
         for line in text_content.splitlines():
             item = cls.parse_universal_line(line)
             if item:
                 parsed_items.append(item)
-
-        return cls.match_cards_with_database(parsed_items, all_cards_database)
+        return parsed_items
 
     @classmethod
-    def parse_excel_file(cls, filepath: str, all_cards_database: list[Any]) -> list[Any]:
-        try:
-            wb = load_workbook(filename=filepath, data_only=True)
-            sheet = wb.active
-        except Exception as e:
-            raise ValueError(f"Greška pri otvaranju Excel fajla '{filepath}': {e}") from e
+    def parse_card_list_text(cls, text_content: str, all_cards_database: list[Any]) -> tuple[list[Any], list[str]]:
+        return cls.match_cards_with_database(cls.parse_lines(text_content), all_cards_database)
 
-        rows = list(sheet.iter_rows(values_only=True))
-        if not rows:
-            return []
-
-        header = [str(cell).strip().lower() if cell is not None else "" for cell in rows[0]]
-        
-        col_name = cls._find_column_index(header, ["name", "card name", "naziv", "kartica"])
-        col_qty = cls._find_column_index(header, ["quantity", "qty", "kolicina", "count", "count/qty"])
-        col_set = cls._find_column_index(header, ["set", "set code", "set_code", "edition"])
-        col_num = cls._find_column_index(header, ["collector number", "collector_number", "number", "card #", "#"])
-
-        if col_name is None:
-            raise ValueError("Excel fajl mora sadržati kolonu sa nazivom kartice ('Name' ili 'Naziv').")
-
-        parsed_items = []
-        for row in rows[1:]:
-            if not row or row[col_name] is None:
-                continue
-
-            name = str(row[col_name]).strip()
-            if not name:
-                continue
-
-            qty = 1
-            if col_qty is not None and row[col_qty] is not None:
-                try:
-                    qty = int(row[col_qty])
-                except (ValueError, TypeError):
-                    qty = 1
-
-            set_code = None
-            if col_set is not None and row[col_set] is not None:
-                set_code = str(row[col_set]).strip().lower()
-
-            coll_num = None
-            if col_num is not None and row[col_num] is not None:
-                coll_num = str(row[col_num]).strip()
-
-            parsed_items.append((qty, name, set_code, coll_num))
-
-        return cls.match_cards_with_database(parsed_items, all_cards_database)
-
-    @staticmethod
-    def _find_column_index(header: list[str], possible_names: list[str]) -> int | None:
-        for name in possible_names:
-            if name in header:
-                return header.index(name)
-        return None
 
 def parse_universal_line(line: str):
     return CardImporter.parse_universal_line(line)
 
-def parse_image_uri(line_or_text: str):
-    return CardImporter.parse_image_uri(line_or_text)
+
+def parse_lines(text_content: str):
+    return CardImporter.parse_lines(text_content)
+
 
 def match_cards_with_database(parsed_items, all_cards_database):
     return CardImporter.match_cards_with_database(parsed_items, all_cards_database)
 
+
 def parse_card_list_text(text_content: str, all_cards_database: list[Any]):
     return CardImporter.parse_card_list_text(text_content, all_cards_database)
-
-def parse_excel_file(filepath: str, all_cards_database: list[Any]):
-    return CardImporter.parse_excel_file(filepath, all_cards_database)

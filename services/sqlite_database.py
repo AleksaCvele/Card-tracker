@@ -1,9 +1,12 @@
 import json
+import logging
 import os
 import sqlite3
 
 from downloader import ScryfallDownloader
 from models.card import Card
+
+logger = logging.getLogger(__name__)
 
 
 class SQLiteCardDatabase:
@@ -48,7 +51,7 @@ class SQLiteCardDatabase:
 
         if count == 0:
             if os.path.exists(self.jsonl_path):
-                print(f"Pronađen JSONL fajl: {self.jsonl_path}. Inicijalizujem SQLite bazu...")
+                logger.info(f"Pronađen JSONL fajl: {self.jsonl_path}. Inicijalizujem SQLite bazu...")
                 batch = []
                 with open(self.jsonl_path, encoding="utf-8") as f:
                     for line in f:
@@ -86,7 +89,7 @@ class SQLiteCardDatabase:
                 cursor.execute("INSERT INTO cards_fts(cards_fts) VALUES('rebuild')")
                 conn.commit()
             else:
-                print(f"GREŠKA: JSONL fajl '{self.jsonl_path}' nije pronađen u root folderu!")
+                logger.error(f"GREŠKA: JSONL fajl '{self.jsonl_path}' nije pronađen u root folderu!")
 
         cursor.execute("SELECT raw_json FROM cards")
         rows = cursor.fetchall()
@@ -100,7 +103,7 @@ class SQLiteCardDatabase:
             except Exception:
                 continue
 
-        print(f"Uspešno učitano {len(self.cards)} karata iz SQLite baze.")
+        logger.info(f"Uspešno učitano {len(self.cards)} karata iz SQLite baze.")
 
     def search(self, query: str) -> list[Card]:
         if not query.strip():
@@ -124,7 +127,7 @@ class SQLiteCardDatabase:
             downloader = ScryfallDownloader()
 
             if not downloader.download_and_extract(self.jsonl_path):
-                print("Preuzimanje Scryfall podataka nije uspelo.")
+                logger.error("Preuzimanje Scryfall podataka nije uspelo.")
                 return False
 
             if os.path.exists(self.db_path):
@@ -134,5 +137,5 @@ class SQLiteCardDatabase:
             self.load_cards()
             return True
         except Exception as e:
-            print(f"Greška pri ažuriranju SQLite baze: {e}")
+            logger.error(f"Greška pri ažuriranju SQLite baze: {e}")
             return False

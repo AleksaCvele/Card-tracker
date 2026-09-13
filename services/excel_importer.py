@@ -25,12 +25,17 @@ class ExcelImporter:
             if not row:
                 continue
 
-            row_vals = [str(v).strip().lower() for v in row if v is not None]
+            # Indeks mora da prati stvarnu kolonu: preskakanje praznih celija
+            # bi pomerilo numeraciju i citali bismo pogresnu kolonu.
+            for j, value in enumerate(row):
+                if value is None:
+                    continue
 
-            for j, val in enumerate(row_vals):
-                if any(keyword in val for keyword in cls.NAME_KEYWORDS):
+                val = str(value).strip().lower()
+
+                if name_idx == -1 and any(k in val for k in cls.NAME_KEYWORDS):
                     name_idx = j
-                elif any(keyword in val for keyword in cls.QUANTITY_KEYWORDS):
+                elif qty_idx == -1 and any(k in val for k in cls.QUANTITY_KEYWORDS):
                     qty_idx = j
 
             if name_idx != -1:

@@ -1,7 +1,6 @@
 import openpyxl
 import pytest
 
-from collection import CollectionExporter as LegacyExporter
 from models.card import Card
 from services.card_collection import CardCollection
 from services.excel_exporter import CollectionExporter
@@ -107,14 +106,40 @@ def test_import_of_an_empty_sheet_is_harmless(tmp_path, fake_db):
     assert ExcelImporter.import_file(str(path), fake_db, CardCollection()) == (0, [])
 
 
-def test_legacy_exporter_still_writes_its_four_columns(tmp_path, bolt_data):
-    ok, name = LegacyExporter.export_to_excel([Card(bolt_data)], str(tmp_path / "legacy.xlsx"))
-    assert ok is True
+def _sheet(tmp_path, rows, name="sheet.xlsx"):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    for row in rows:
+        ws.append(row)
+    path = tmp_path / name
+    wb.save(path)
+    return path
 
-    ws = openpyxl.load_workbook(name).active
-    assert list(ws.iter_rows(values_only=True))[0] == (
-        "Naziv kartice",
-        "Set iz kog je kartica",
-        "Kolekcijski broj kartice",
-        "Cena kartice",
-    )
+
+def test_import_handles_a_leading_blank_column(tmp_path, fake_db):
+    """Regresija: prazna prva kolona je pomerala indekse i uvozila 0 karata."""
+    path = _sheet(tmp_path, [[None, "Naziv", "Kolicina"], [None, "Forest", 4]])
+
+    collection = CardCollection()
+    added, unmatched = ExcelImporter.import_file(str(path), fake_db, collection)
+
+    assert (added, unmatched) == (4, [])
+    assert collection.get_total_count() == 4
+
+
+def test_import_handles_blank_columns_between_headers(tmp_path, fake_db):
+    path = _sheet(tmp_path, [["Naziv", None, "Kolicina"], ["Forest", None, 2]])
+
+    collection = CardCollection()
+    added, _ = ExcelImporter.import_file(str(path), fake_db, collection)
+    assert added == 2
+
+
+def test_first_matching_header_wins(tmp_path, fake_db):
+    """'Card Name' i 'Card #' oba sadrze 'card' - ime je prva kolona."""
+    path = _sheet(tmp_path, [["Card Name", "Card #"], ["Forest", "280"]])
+
+    collection = CardCollection()
+    added, _ = ExcelImporter.import_file(str(path), fake_db, collection)
+    assert added == 1
+    assert collection.items[0].name == "Forest"

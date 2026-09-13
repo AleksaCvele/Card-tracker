@@ -1,7 +1,7 @@
 import bisect
 
 from collection import CollectionStorage
-from importer import match_cards_with_database, parse_card_list_text
+from importer import match_cards_with_database, parse_lines
 from models.card import Card
 
 
@@ -63,33 +63,14 @@ class CardCollection:
         return result
 
     def import_from_text(self, raw_text: str, database) -> tuple[int, list[str]]:
-
-        db_raw_dicts = [card.to_dict() for card in database.cards]
-        parsed_items = parse_card_list_text(raw_text, db_raw_dicts)
+        """Uvozi tekstualnu listu; vraca (broj dodatih, neprepoznate stavke)."""
+        parsed_items = parse_lines(raw_text)
 
         if not parsed_items:
             return 0, []
 
-        formatted_items = []
-
-        for item in parsed_items:
-            if isinstance(item, dict):
-                qty = item.get("quantity", item.get("qty", 1))
-                name = item.get("name", "")
-                set_code = item.get("set_code", item.get("set", ""))
-                collector_number = item.get("collector_number", item.get("collector_num", ""))
-                formatted_items.append((qty, name, set_code, collector_number))
-
-            elif isinstance(item, (list, tuple)):
-                formatted_items.append(tuple(item[:4]))
-
-        result = match_cards_with_database(formatted_items, db_raw_dicts)
-
-        if isinstance(result, tuple) and len(result) == 2:
-            matched_dicts, unmatched = result
-        else:
-            matched_dicts = result
-            unmatched = []
+        db_raw_dicts = [card.to_dict() for card in database.cards]
+        matched_dicts, unmatched = match_cards_with_database(parsed_items, db_raw_dicts)
 
         for card_dict in matched_dicts:
             self.add_card(Card(card_dict))

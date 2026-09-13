@@ -1,7 +1,10 @@
+import logging
 import math
 from datetime import datetime, timedelta
 
 import requests
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_RATES = {"EUR": 0.92, "RSD": 117.0}
 
@@ -43,11 +46,11 @@ class PricingService:
                     "RSD": rates.get("RSD", DEFAULT_RATES["RSD"]),
                 }
                 cls._last_fetch_date = today
-                print(f"Uspešno učitani kursevi valuta: {cls._rates_cache}")
+                logger.info(f"Uspešno učitani kursevi valuta: {cls._rates_cache}")
             else:
-                print(f"Greška pri preuzimanju kurseva, status: {response.status_code}")
+                logger.error(f"Greška pri preuzimanju kurseva, status: {response.status_code}")
         except Exception as e:
-            print(f"Izuzetak pri povezivanju sa API-jem za kurseve: {e}")
+            logger.warning(f"Izuzetak pri povezivanju sa API-jem za kurseve: {e}")
 
         if not cls._rates_cache:
             cls._rates_cache = dict(DEFAULT_RATES)
