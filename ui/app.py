@@ -1,12 +1,12 @@
 import threading
 import tkinter as tk
-from tkinter import messagebox, scrolledtext, filedialog, Toplevel, Label, ttk
+from tkinter import Label, Toplevel, filedialog, messagebox, scrolledtext, ttk
 
-from services.card_database import CardDatabase
+from models.card import Card
 from services.card_collection import CardCollection
+from services.card_database import CardDatabase
 from services.excel_exporter import CollectionExporter
 from services.excel_importer import ExcelImporter
-from models.card import Card
 from ui.card_list import FastCardList
 
 
@@ -230,8 +230,10 @@ class ScryfallApp:
             try:
                 success = self.db.update_from_scryfall()
                 self.root.after(0, lambda: on_update_finished(success))
-            except Exception as e:
-                self.root.after(0, lambda: on_update_finished(False, str(e)))
+            except Exception as exc:
+                # `exc` nestaje na kraju except bloka, pa poruku vezujemo odmah.
+                message = str(exc)
+                self.root.after(0, lambda: on_update_finished(False, message))
 
         def on_update_finished(success, error=None):
             self.loading_win.destroy()

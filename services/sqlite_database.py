@@ -1,8 +1,10 @@
-import sqlite3
-import os
 import json
-from typing import List
+import os
+import sqlite3
+
+from downloader import ScryfallDownloader
 from models.card import Card
+
 
 class SQLiteCardDatabase:
     def __init__(self, db_path="scryfall.db", jsonl_path="scryfall_default_cards.jsonl"):
@@ -48,7 +50,7 @@ class SQLiteCardDatabase:
             if os.path.exists(self.jsonl_path):
                 print(f"Pronađen JSONL fajl: {self.jsonl_path}. Inicijalizujem SQLite bazu...")
                 batch = []
-                with open(self.jsonl_path, "r", encoding="utf-8") as f:
+                with open(self.jsonl_path, encoding="utf-8") as f:
                     for line in f:
                         if not line.strip():
                             continue
@@ -100,7 +102,7 @@ class SQLiteCardDatabase:
 
         print(f"Uspešno učitano {len(self.cards)} karata iz SQLite baze.")
 
-    def search(self, query: str) -> List[Card]:
+    def search(self, query: str) -> list[Card]:
         if not query.strip():
             return self.cards
 
@@ -113,9 +115,21 @@ class SQLiteCardDatabase:
         return results
 
     def update_from_scryfall(self) -> bool:
+        """Preuzima svez JSONL sa Scryfall-a i ponovo gradi SQLite indeks.
+
+        Bez preuzimanja bi dugme "Osveži bazu" samo ponovo ucitalo isti
+        lokalni fajl, pa korisnik nikada ne bi dobio nove podatke.
+        """
         try:
+            downloader = ScryfallDownloader()
+
+            if not downloader.download_and_extract(self.jsonl_path):
+                print("Preuzimanje Scryfall podataka nije uspelo.")
+                return False
+
             if os.path.exists(self.db_path):
                 os.remove(self.db_path)
+
             self._init_db()
             self.load_cards()
             return True

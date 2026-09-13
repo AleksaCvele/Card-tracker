@@ -1,15 +1,16 @@
 import json
 import os
-from typing import List, Tuple, Optional, Dict, Any
+from typing import Any
+
 import openpyxl
-from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
 
 class CollectionExporter:
 
     @staticmethod
-    def export_to_excel(cards: List[Any], filename: str = "moja_kolekcija.xlsx") -> Tuple[bool, str]:
+    def export_to_excel(cards: list[Any], filename: str = "moja_kolekcija.xlsx") -> tuple[bool, str]:
         
         if not filename.endswith(".xlsx"):
             filename += ".xlsx"
@@ -96,7 +97,7 @@ class CollectionExporter:
 class CollectionStorage:
 
     @classmethod
-    def save_to_file(cls, filename: str, collection_list: List[Any]):
+    def save_to_file(cls, collection_list: list[Any], filename: str) -> tuple[bool, str]:
         temp_filename = filename + ".tmp"
         try:
             saved_data = []
@@ -122,7 +123,8 @@ class CollectionStorage:
                 json.dump(saved_data, f, ensure_ascii=False, indent=4)
 
             os.replace(temp_filename, filename)
-            
+            return True, filename
+
         except Exception as e:
             print(f"Greška pri čuvanju kolekcije: {e}")
             if os.path.exists(temp_filename):
@@ -130,10 +132,10 @@ class CollectionStorage:
                     os.remove(temp_filename)
                 except OSError:
                     pass
-            raise e
+            return False, filename
 
     @classmethod
-    def load_from_file(cls, filename: str, all_cards_database: List[Any]) -> List[Any]:
+    def load_from_file(cls, filename: str, all_cards_database: list[Any]) -> list[Any]:
       
         if not os.path.exists(filename):
             # Provera ako je prošireno bez ekstenzije
@@ -150,12 +152,12 @@ class CollectionStorage:
         return cls._load_from_json(filename, all_cards_database)
 
     @classmethod
-    def _load_from_json(cls, filename: str, all_cards_database: List[Any]) -> List[Any]:
+    def _load_from_json(cls, filename: str, all_cards_database: list[Any]) -> list[Any]:
         db_map, db_cheapest_map = cls._build_database_maps(all_cards_database)
         loaded_collection = []
 
         try:
-            with open(filename, "r", encoding="utf-8") as f:
+            with open(filename, encoding="utf-8") as f:
                 saved_data = json.load(f)
 
             for item in saved_data:
@@ -192,7 +194,7 @@ class CollectionStorage:
 
     
     @classmethod
-    def _load_from_excel(cls, filename: str, all_cards_database: List[Any]) -> List[Any]:
+    def _load_from_excel(cls, filename: str, all_cards_database: list[Any]) -> list[Any]:
         try:
             wb = openpyxl.load_workbook(filename=filename, data_only=True)
             sheet = wb.active
@@ -254,7 +256,7 @@ class CollectionStorage:
         return loaded_collection
 
     @staticmethod
-    def _build_database_maps(all_cards_database: List[Any]) -> Tuple[Dict, Dict]:
+    def _build_database_maps(all_cards_database: list[Any]) -> tuple[dict, dict]:
         db_map = {}
         for card in all_cards_database:
             c_dict = card.to_dict() if hasattr(card, "to_dict") else card
@@ -270,14 +272,14 @@ class CollectionStorage:
         return db_map, db_cheapest_map
 
     @staticmethod
-    def _find_column_index(header: List[str], possible_names: List[str]) -> Optional[int]:
+    def _find_column_index(header: list[str], possible_names: list[str]) -> int | None:
         for name in possible_names:
             if name in header:
                 return header.index(name)
         return None
 
     @staticmethod
-    def _find_cheapest_versions_map(all_cards: List[Any]) -> Dict[str, Any]:
+    def _find_cheapest_versions_map(all_cards: list[Any]) -> dict[str, Any]:
         cheapest_map = {}
         for card in all_cards:
             c_dict = card.to_dict() if hasattr(card, "to_dict") else card
@@ -296,13 +298,13 @@ class CollectionStorage:
 
         return cheapest_map
 
-def save_collection_to_file(collection_list: List[Any], filename: str) -> Tuple[bool, str]:
+def save_collection_to_file(collection_list: list[Any], filename: str) -> tuple[bool, str]:
     return CollectionStorage.save_to_file(collection_list, filename)
 
 
-def load_collection_from_file(filename: str, all_cards_database: List[Any]) -> List[Any]:
+def load_collection_from_file(filename: str, all_cards_database: list[Any]) -> list[Any]:
     return CollectionStorage.load_from_file(filename, all_cards_database)
 
 
-def export_collection_to_excel(collection_list: List[Any], filename: str = "kolekcija.xlsx") -> Tuple[bool, str]:
+def export_collection_to_excel(collection_list: list[Any], filename: str = "kolekcija.xlsx") -> tuple[bool, str]:
     return CollectionExporter.export_to_excel(collection_list, filename)

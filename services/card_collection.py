@@ -1,5 +1,4 @@
 import bisect
-from typing import List, Optional, Tuple
 
 from collection import CollectionStorage
 from importer import match_cards_with_database, parse_card_list_text
@@ -9,7 +8,7 @@ from models.card import Card
 class CardCollection:
     def __init__(self, filename: str = ""):
         self.filename = filename
-        self.items: List[Card] = []
+        self.items: list[Card] = []
 
     def add_card(self, card: Card):
 
@@ -40,7 +39,7 @@ class CardCollection:
 
                 return
 
-    def load(self, database, filename: Optional[str] = None) -> List[Card]:
+    def load(self, database, filename: str | None = None) -> list[Card]:
 
         target_filename = filename or self.filename
         raw_dict_cards = [card.to_dict() for card in database.cards]
@@ -52,7 +51,7 @@ class CardCollection:
 
         return self.items
 
-    def save(self, filename: Optional[str] = None) -> Tuple[bool, str]:
+    def save(self, filename: str | None = None) -> tuple[bool, str]:
 
         target_filename = filename or self.filename
         dict_items = [card.to_dict() for card in self.items]
@@ -63,7 +62,7 @@ class CardCollection:
 
         return result
 
-    def import_from_text(self, raw_text: str, database) -> Tuple[int, List[str]]:
+    def import_from_text(self, raw_text: str, database) -> tuple[int, list[str]]:
 
         db_raw_dicts = [card.to_dict() for card in database.cards]
         parsed_items = parse_card_list_text(raw_text, db_raw_dicts)
@@ -97,7 +96,7 @@ class CardCollection:
 
         return len(matched_dicts), unmatched
 
-
+    def get_total_value(self) -> float:
         return sum(card.price_numeric * card.quantity for card in self.items)
 
     def get_total_value_eur(self) -> float:
@@ -130,4 +129,4 @@ class CardCollection:
 
     def get_unique_count(self) -> int:
 
-        return len(set(card.name.lower() for card in self.items))
+        return len({card.name.lower() for card in self.items})
