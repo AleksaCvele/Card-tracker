@@ -158,6 +158,35 @@ FROM etl.LoadError le
 WHERE le.LoadRunId = (SELECT MAX(LoadRunId) FROM etl.LoadRun);
 ```
 
+## Using SQL Server as the app's card catalog
+
+`services/mssql_database.py` implements the same `CardLookup` interface as the
+SQLite backend, so collection loading and decklist import work against it
+unchanged.
+
+**Search is the caveat, and it's a big one.** SQL Server Full-Text Search is an
+optional component and often isn't installed — the standard Docker image
+doesn't have it. Without it, catalog search falls back to `LIKE '%term%'`,
+which no index can accelerate. Measured on 100,000 cards:
+
+| Query | SQLite FTS5 | SQL Server, no full-text |
+| --- | --- | --- |
+| `light` | 38 ms | 719 ms |
+| `lightning bolt` | 12 ms | 433 ms |
+| `ning` | 26 ms | 362 ms |
+
+Lookups by name or printing are unaffected (~19 ms) — those use real indexes.
+It's specifically the free-text search box.
+
+Run `13_fulltext_optional.sql` to set up a full-text index if your instance has
+the feature; the backend detects it and switches to `CONTAINS` with prefix
+matching automatically. If the feature isn't installed the script explains how
+to add it and changes nothing.
+
+Because of this, the recommended split is SQL Server for stock, orders and
+restocking — where it's clearly the right tool — with the local SQLite index
+kept for card search, where it's 10–30x faster and works with no server at all.
+
 ## Running it locally
 
 ```bash
